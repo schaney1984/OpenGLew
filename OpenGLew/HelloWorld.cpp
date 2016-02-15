@@ -4,11 +4,22 @@
 #include <GL\freeglut.h>
 #include <iostream>
 
+#define USING_INDEX_BUFFER 1
+
+#ifdef USING_INDEX_BUFFER
+	#define NUM_VERTICES 6
+	#define NUM_INDICES 9	
+#else
+	#define NUM_VERTICES 9
+#endif
+
 #define BUFFER_OFFSET(i) ((char *) NULL + (i)))
 GLuint shaderProgramID;
 GLuint vao = 0;
 GLuint vbo;
 GLuint positionID, colorID;
+GLuint indexBufferID;
+
 
 using namespace std;
 
@@ -64,7 +75,12 @@ void changeViewPort(int w, int h)
 void render()
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glDrawArrays(GL_TRIANGLES, 0, 3);
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+#ifdef USING_INDEX_BUFFER
+	glDrawElements(GL_TRIANGLES, NUM_INDICES, GL_UNSIGNED_INT, NULL);
+#else
+	glDrawArrays(GL_TRIANGLES, 0, NUM_VERTICES);
+#endif
 	glutSwapBuffers();
 }
 
@@ -92,12 +108,46 @@ int main(int argc, char* argv[]) {
 
 	// Vertices and colors of a triangle
 	// Notice, position values are between -1.0f and +1.0f
-	GLfloat vertices[] = { -0.5f, -0.5f, 0.0f,			// Lower-left
-							0.5f, -0.5f, 0.0f,				// Lower-right
-							0.0f, 0.5f, 0.0f };				// Top
-	GLfloat colors[] = { 1.0f, 0.0f, 0.0f, 1.0f,
-						0.0f, 1.0f, 0.0f, 1.0f,
-						0.0f, 0.0f, 1.0f, 1.0f };
+#ifdef USING_INDEX_BUFFER
+	GLfloat vertices[] = { 0.0f, 0.5f, 0.0f, // 0
+		-0.25f, 0.0f, 0.0f, // 1
+		0.25f, 0.0f, 0.0f, // 2
+		-0.5f, -0.5f, 0.0f, // 3
+		0.0f, -0.5f, 0.0f, // 4
+		0.5f, -0.5f, 0.0f // 5
+	};
+	GLfloat colors[] = { 1.0f, 0.00f, 0.0f, 1.0f, // 0
+		0.0f, 1.00f, 0.0f, 1.0f, // 1
+		0.0f, 0.00f, 1.0f, 1.0f, // 2
+		0.0f, 0.00f, 1.0f, 1.0f, // 3
+		1.0f, 0.00f, 0.0f, 1.0f, // 4
+		0.0f, 1.0f, 0.0f, 1.0f // 5
+	};
+
+	GLuint indices[] = { 0, 1, 2, 1, 3, 4, 2, 4, 5 };
+#else
+	GLfloat vertices[] = { -0.5f, -0.5f, 0.0f,
+		0.0f, -0.5f, 0.0f,
+		-0.25f, 0.0f, 0.0f,
+		-0.25f, 0.0f, 0.0f,
+		0.25f, 0.0f, 0.0f,
+		0.0f, 0.5f, 0.0f,
+		0.0f, -0.5f, 0.0f,
+		0.5f, -0.5f, 0.0f,
+		0.25f, 0.0f, 0.0f
+	};
+	GLfloat colors[] = { 1.0f, 0.00f, 0.0f, 1.0f,
+		0.0f, 1.00f, 0.0f, 1.0f,
+		0.0f, 0.0f, 1.0f, 1.0f,
+		1.0f, 0.00f, 0.0f, 1.0f,
+		0.0f, 1.00f, 0.0f, 1.0f,
+		0.0f, 0.0f, 1.0f, 1.0f,
+		1.0f, 0.00f, 0.0f, 1.0f,
+		0.0f, 1.00f, 0.0f, 1.0f,
+		0.0f, 0.0f, 1.0f, 1.0f
+	};
+
+#endif
 
 	// Make a shader
 	char* vertexShaderSource = readFile("vShader.vsh");
@@ -105,7 +155,8 @@ int main(int argc, char* argv[]) {
 	GLuint vertShaderID = makeVertexShader(vertexShaderSource);
 	GLuint fragShaderID = makeFragmentShader(fragmentShaderSource);
 	GLuint shaderProgramID = makeShaderProgram(vertShaderID, fragShaderID);
-	glUseProgram(shaderProgramID);
+	
+	//glUseProgram(shaderProgramID);
 	printf("vertShaderID is %d\n", vertShaderID);
 	printf("fragShaderID is %d\n", fragShaderID);
 	printf("shaderProgramID is %d\n", shaderProgramID);
@@ -117,11 +168,17 @@ int main(int argc, char* argv[]) {
 	glGenBuffers(1, &vbo);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
 	// Create the buffer, but don't load anything yet
-	glBufferData(GL_ARRAY_BUFFER, 7 * 3 * sizeof(GLfloat), NULL, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, 7 * NUM_VERTICES*sizeof(GLfloat), NULL, GL_STATIC_DRAW);
 	// Load the vertex points
-	glBufferSubData(GL_ARRAY_BUFFER, 0, 3 * 3 * sizeof(GLfloat), vertices);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, 3 * NUM_VERTICES*sizeof(GLfloat), vertices);
 	// Load the colors right after that
-	glBufferSubData(GL_ARRAY_BUFFER, 3 * 3 * sizeof(GLfloat), 3 * 4 * sizeof(GLfloat), colors);
+	glBufferSubData(GL_ARRAY_BUFFER, 3 * NUM_VERTICES*sizeof(GLfloat), 4 * NUM_VERTICES*sizeof(GLfloat), colors);
+
+#ifdef USING_INDEX_BUFFER
+	glGenBuffers(1, &indexBufferID);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferID);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, NUM_INDICES*sizeof(GLuint), indices, GL_STATIC_DRAW);
+#endif
 
 
 	// Find the position of the variables in the shader
@@ -129,12 +186,12 @@ int main(int argc, char* argv[]) {
 	colorID = glGetAttribLocation(shaderProgramID, "s_vColor");
 
 	glVertexAttribPointer(positionID, 3, GL_FLOAT, GL_FALSE, 0, 0);
-	glVertexAttribPointer(colorID, 4, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(3 * 3 * sizeof(GLfloat));
+	glVertexAttribPointer(colorID, 4, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(sizeof(vertices));
 	glUseProgram(shaderProgramID);
 	glEnableVertexAttribArray(positionID);
 	glEnableVertexAttribArray(colorID);
 
 	// glDeleteProgram(shaderProgramID);
-	glutMainLoop(); 
+	glutMainLoop();
 	return 0;
 }
